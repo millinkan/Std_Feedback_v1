@@ -15,6 +15,6 @@ Jaadi :
 
 After set up:
 
-Run : streamlit run student_feedback_app.py --server.port 8501 for student app : https:localhost:8501
-Run : streamlit run teacher_feedback_app.py --server.port 8502 for student app : https:localhost:8502
+ - Run : streamlit run student_feedback_app.py --server.port 8501 for student app : https:localhost:8501
+ - Run : streamlit run teacher_feedback_app.py --server.port 8502 for student app : https:localhost:8502
 
