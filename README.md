@@ -1,3 +1,5 @@
+Install the streamlit and pandas
+
 - Install all dependencies
   - - streamlit>=1.24.0
   - - pandas>=1.3.0  # Only if you need data analysis; otherwise, can omit
