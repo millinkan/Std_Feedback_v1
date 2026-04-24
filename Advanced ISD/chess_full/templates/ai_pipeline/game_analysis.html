@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis - {{ game.player_white }} vs {{ game.player_black }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h2 class="mb-1">{{ game.player_white }} vs {{ game.player_black }}</h2>
+    <p class="text-muted mb-4">{{ game.played_at|date:"F j, Y H:i" }} · {{ game.time_control }} · Result: <strong>{{ game.result }}</strong></p>
+
+    {% if not analysis %}
+        <div class="alert alert-warning">No analysis found for this game.</div>
+    {% elif analysis.status == 'pending' or analysis.status == 'processing' %}
+        <div class="alert alert-info">Analysis is currently <strong>{{ analysis.get_status_display }}</strong>.</div>
+    {% elif analysis.status == 'failed' %}
+        <div class="alert alert-danger"><strong>Analysis failed.</strong> {{ analysis.error_message }}</div>
+    {% else %}
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">White Avg CPL</div><div class="fs-3 fw-bold text-primary">{{ analysis.white_avg_centipawn_loss|floatformat:1 }}</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Black Avg CPL</div><div class="fs-3 fw-bold text-dark">{{ analysis.black_avg_centipawn_loss|floatformat:1 }}</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">White Blunders</div><div class="fs-3 fw-bold text-danger">{{ analysis.white_blunders }}</div></div></div></div>
+            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Black Blunders</div><div class="fs-3 fw-bold text-danger">{{ analysis.black_blunders }}</div></div></div></div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">Move-by-Move Evaluation</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>#</th><th>Side</th><th>Move</th><th>Best</th><th>CPL</th><th>Class</th></tr></thead>
+                    <tbody>
+                        {% for move in moves %}
+                        <tr>
+                            <td>{{ move.move_number }}</td>
+                            <td>{% if move.is_white %}White{% else %}Black{% endif %}</td>
+                            <td><strong>{{ move.move_san }}</strong></td>
+                            <td class="text-muted">{{ move.best_move_san|default:"-" }}</td>
+                            <td>{{ move.centipawn_loss|floatformat:1 }}</td>
+                            <td>{{ move.get_classification_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

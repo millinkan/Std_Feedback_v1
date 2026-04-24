@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Game - {{ game.player_white }} vs {{ game.player_black }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>{{ game.player_white }} vs {{ game.player_black }}</h2>
+    <p class="text-muted">{{ game.played_at|date:"F j, Y H:i" }} · {{ game.time_control }} · Result: {{ game.result }}</p>
+
+    {% if game.lichess_game_id %}
+    <div class="ratio ratio-4x3 mb-4" style="max-width: 700px;">
+        <iframe src="https://lichess.org/embed/game/{{ game.lichess_game_id }}?theme=auto&bg=auto" allowfullscreen title="Lichess game {{ game.lichess_game_id }}"></iframe>
+    </div>
+    {% else %}
+    <div class="alert alert-secondary">This game does not have a Lichess ID.</div>
+    {% endif %}
+
+    {% if game.analysis %}
+    <a href="{% url 'ai_pipeline:game_analysis' game.pk %}" class="btn btn-primary">View Stockfish Analysis</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Insights - {{ member }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h2 class="mb-1">AI Insights for {{ member }}</h2>
+    <p class="text-muted mb-4">Weakness patterns and recommendations generated from analysed games.</p>
+
+    {% if not insights %}
+        <div class="alert alert-secondary">No insights available yet. Generate analyses first.</div>
+    {% else %}
+        <div class="row g-4">
+            {% for insight in insights %}
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                        <span class="fw-semibold">{{ insight.title }}</span>
+                        <span class="badge bg-dark">{{ insight.get_category_display }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3 text-secondary">{{ insight.description }}</p>
+                        <div class="p-3 rounded bg-light border-start border-4 border-primary mb-3">
+                            <div class="small text-uppercase text-muted fw-semibold mb-1">Recommendation</div>
+                            {{ insight.recommendation }}
+                        </div>
+                        <div class="small text-muted">Based on <strong>{{ insight.games_analysed }}</strong> game(s)</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

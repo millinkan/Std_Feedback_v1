@@ -1,0 +1,7 @@
+Django>=5.0
+Pillow
+celery
+redis
+requests
+python-chess
+stockfish
