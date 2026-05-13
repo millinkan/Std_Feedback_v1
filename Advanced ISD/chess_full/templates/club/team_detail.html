@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <a href="{% url 'club:teams_list' %}" class="small text-muted">&larr; All teams</a>
+    <h1 class="h3 mt-2">{{ team.name }}</h1>
+    {% if team.description %}<p class="text-muted">{{ team.description }}</p>{% endif %}
+
+    <h2 class="h6 text-uppercase text-muted mt-4">Members</h2>
+    <ul class="list-group shadow-sm">
+        {% for tm in team.teammembership_set.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="{% url 'club:member_detail' tm.member_id %}">{{ tm.member.display_name }}</a>
+                <span class="badge bg-secondary">{{ tm.get_role_display }}</span>
+            </li>
+        {% empty %}
+            <li class="list-group-item text-muted">No members assigned.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

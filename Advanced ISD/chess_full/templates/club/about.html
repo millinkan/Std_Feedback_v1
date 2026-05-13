@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}About{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row g-5">
+        <div class="col-lg-7">
+            <h1 class="h3 mb-3">About Eschen Chess Club</h1>
+
+            <section id="club-history" class="mb-5 club-history" aria-labelledby="club-history-heading">
+                <h2 id="club-history-heading" class="h4 mb-3">Our story</h2>
+                <p class="lead text-muted">
+                    Eschen lies in Liechtenstein’s <em>Unterland</em>, north of Vaduz along the Alpine Rhine. Like many Rhein‑Valley communities here, local life runs through municipalities, sports clubs (<em>Vereine</em>), and school halls that double as meeting rooms — a familiar pattern across the Principality’s small towns.
+                </p>
+                <p>
+                    Eschen Chess Club traces its origins to informal <em>Vereinsabend</em> games in the 1990s, when neighbours began meeting after work with boards borrowed from schools and the Gemeinschaftsraum. What started as a handful of clocks and score sheets grew into structured internal leagues mixing rapid rounds on weeknights and longer classical evenings before holidays.
+                </p>
+                <p>
+                    Today the club anchors two rhythms: competitive adults who sharpen openings for tournaments in neighbouring Switzerland and Vorarlberg, and a youth strand held Sunday mornings near <strong>Schulhaus Eschen</strong>, where juniors learn notation and etiquette before graded play. Rated events elsewhere in the Principality typically follow handbook time‑control norms; organisers keep the same conventions for Eschen‑hosted opens so travellers know what to expect.
+                </p>
+                <h3 class="h6 text-uppercase text-muted mb-3">Milestones (illustrative)</h3>
+                <ul class="timeline-markers small">
+                    <li><strong class="text-body">Late 1980s</strong> — ad‑hoc gatherings in Unterland workplaces and cafés introduce a regular Thursday board.</li>
+                    <li><strong class="text-body">1996</strong> — first internal round‑robin at the community centre (<strong>{{ club_primary_venue }}</strong>), pairings handwritten.</li>
+                    <li><strong class="text-body">2009</strong> — youth afternoons formalised with school cooperation; parental volunteers rotate supervision.</li>
+                    <li><strong class="text-body">2020 onwards</strong> — live pairings kiosk and this portal supplement paper bulletins.</li>
+                </ul>
+            </section>
+
+            <section aria-labelledby="about-portal-heading" class="border-top pt-4">
+                <h2 id="about-portal-heading" class="h5 mb-3">About this website</h2>
+                <p class="text-muted mb-2">
+                    The portal records over‑the‑board results and publishes club announcements. Staff enter finished games in Django admin so club ratings update instantly; adaptive K‑factors mirror common Elō practice on long ladder histories.
+                </p>
+                <p class="mb-0 small text-muted">
+                    Optional Lichess imports and engine-backed views run on background workers — ask the technical lead if you administer infrastructure. Staff MFA: enroll a TOTP device on your Django user inside <code>/admin/</code>.
+                </p>
+            </section>
+        </div>
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm sticky-lg-top" style="top: 1rem;">
+                <div class="card-body">
+                    <h2 class="h5">Contact organisers</h2>
+                    <p class="small text-muted">Messages are delivered to inbox configured for this deployment (console mail in development).</p>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

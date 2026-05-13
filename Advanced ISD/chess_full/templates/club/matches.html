@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Matches{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">Club matches</h1>
+
+    <ul class="nav nav-pills gap-2 mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'upcoming' %}active{% endif %}" href="{% url 'club:matches' %}?tab=upcoming">Upcoming</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'completed' %}active{% endif %}" href="{% url 'club:matches' %}?tab=completed">Completed</a>
+        </li>
+    </ul>
+
+    {% if tab == 'completed' %}
+        <div class="list-group shadow-sm">
+            {% for mt in completed %}
+                <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'club:match_detail' mt.pk %}">
+                    <span>{{ mt.white_player }} vs {{ mt.black_player }}</span>
+                    <span class="text-muted text-nowrap ms-3">{{ mt.result }} · {{ mt.completed_at|default:mt.scheduled_at|date:'Y-m-d' }}</span>
+                </a>
+            {% empty %}
+                <div class="list-group-item text-muted">No completed matches yet.</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="list-group shadow-sm">
+            {% for mt in upcoming %}
+                <a class="list-group-item list-group-item-action" href="{% url 'club:match_detail' mt.pk %}">
+                    {{ mt.white_player }} vs {{ mt.black_player }} — {{ mt.scheduled_at|date:'Y-m-d H:i' }}{% if mt.venue %} · {{ mt.venue }}{% endif %}
+                </a>
+            {% empty %}
+                <div class="list-group-item text-muted">No upcoming matches scheduled.</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

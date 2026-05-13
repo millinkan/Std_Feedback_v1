@@ -14,6 +14,22 @@ from .services.stockfish_analysis import analyse_game
 logger = logging.getLogger(__name__)
 
 
+def _resolve_member_for_player(player_name, tracked_username, tracked_member):
+    normalized = (player_name or '').strip()
+    if normalized and normalized.lower() == tracked_username.lower():
+        return tracked_member
+    if normalized:
+        opponent, _ = Member.objects.get_or_create(
+            lichess_username=normalized,
+            defaults={'display_name': normalized},
+        )
+        if opponent.display_name != normalized:
+            opponent.display_name = normalized
+            opponent.save(update_fields=['display_name'])
+        return opponent
+    return tracked_member
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def analyse_game_task(self, game_id):
     try:
@@ -57,6 +73,11 @@ def analyse_game_task(self, game_id):
         analysis.status = 'completed'
         analysis.analysed_at = django_tz.now()
         analysis.save()
+
+        # Keep user insights current automatically after each completed analysis.
+        generate_insights_task.delay(game.player_white_id)
+        if game.player_black_id != game.player_white_id:
+            generate_insights_task.delay(game.player_black_id)
     except Exception as exc:
         logger.exception('analyse_game_task failed for game %s', game_id)
         analysis.status = 'failed'
@@ -66,14 +87,14 @@ def analyse_game_task(self, game_id):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=120)
-def fetch_lichess_games_task(self, lichess_username, member_id):
+def fetch_lichess_games_task(self, lichess_username, member_id, api_token=''):
     try:
         member = Member.objects.get(pk=member_id)
     except Member.DoesNotExist:
         logger.error('fetch_lichess_games_task: Member %s not found.', member_id)
         return
 
-    client = LichessClient()
+    client = LichessClient(api_token=api_token)
     try:
         raw_games = client.fetch_recent_games(lichess_username)
     except LichessAPIError as exc:
@@ -87,10 +108,8 @@ def fetch_lichess_games_task(self, lichess_username, member_id):
         players = raw.get('players', {})
         white_name = players.get('white', {}).get('user', {}).get('name', '')
         black_name = players.get('black', {}).get('user', {}).get('name', '')
-        white_member = member if white_name.lower() == lichess_username.lower() else None
-        black_member = member if black_name.lower() == lichess_username.lower() else None
-        if white_member is None and black_member is None:
-            white_member = member
+        white_member = _resolve_member_for_player(white_name, lichess_username, member)
+        black_member = _resolve_member_for_player(black_name, lichess_username, member)
 
         winner = raw.get('winner', '')
         if winner == 'white':
@@ -121,6 +140,30 @@ def fetch_lichess_games_task(self, lichess_username, member_id):
         )
         if pgn:
             analyse_game_task.delay(game.pk)
+
+
+@shared_task
+def periodic_fetch_linked_lichess_games():
+    """
+    Enqueue imports for members who linked a username (intended for Celery Beat hourly schedule).
+    """
+    from django.db.models import Q
+
+    from club.member_utils import sync_member_with_user
+    from club.models import UserProfile
+
+    qs = UserProfile.objects.filter(
+        Q(lichess_username__isnull=False) & ~Q(lichess_username=''),
+    ).select_related('user')
+
+    count = 0
+    for profile in qs.iterator():
+        if not profile.user_id:
+            continue
+        member = sync_member_with_user(profile.user, profile.lichess_username)
+        fetch_lichess_games_task.delay(profile.lichess_username, member.pk, profile.lichess_api_key or '')
+        count += 1
+    return count
 
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=30)

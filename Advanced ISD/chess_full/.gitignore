@@ -12,8 +12,17 @@ env/
 # Django
 db.sqlite3
 *.log
+logs/
+!logs/.gitkeep
 staticfiles/
 media/avatars/
+
+# Local Lichess Swiss dumps (fetch with import_lichess_swiss --fetch); README under lichess_API/ may be tracked
+lichess_API/info.json
+lichess_API/games.ndjson
+
+# Never commit secrets or local credential drop files
+*.pem
 
 # IDE
 .vscode/

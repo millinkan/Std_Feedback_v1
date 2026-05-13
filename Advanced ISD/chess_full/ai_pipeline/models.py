@@ -76,6 +76,45 @@ class MoveEvaluation(models.Model):
         side = 'W' if self.is_white else 'B'
         return f'Move {self.move_number}{side}: {self.move_san} ({self.classification})'
 
+    @staticmethod
+    def format_eval_cp(cp):
+        """Human-readable score from stored centipawns (±999 used as mate sentinel in analysis)."""
+        if cp is None:
+            return '—'
+        try:
+            v = float(cp)
+        except (TypeError, ValueError):
+            return '—'
+        if v >= 998:
+            return 'Mate (+)'
+        if v <= -998:
+            return 'Mate (−)'
+        pawns = v / 100.0
+        return f'{pawns:+.2f}'
+
+    @property
+    def eval_before_display(self):
+        return self.format_eval_cp(self.eval_before)
+
+    @property
+    def eval_after_display(self):
+        return self.format_eval_cp(self.eval_after)
+
+    @property
+    def eval_delta_for_mover_display(self):
+        """Signed change from the moving side’s perspective (positive = improved for you)."""
+        if self.eval_before is None or self.eval_after is None:
+            return '—'
+        try:
+            before, after = float(self.eval_before), float(self.eval_after)
+        except (TypeError, ValueError):
+            return '—'
+        if self.is_white:
+            delta = after - before
+        else:
+            delta = before - after
+        return f'{delta / 100.0:+.2f}'
+
 
 class PlayerInsight(models.Model):
     CATEGORY_CHOICES = [

@@ -9,10 +9,10 @@ class LichessAPIError(Exception):
 
 
 class LichessClient:
-    def __init__(self):
+    def __init__(self, api_token=''):
         self.base_url = settings.LICHESS_API_BASE_URL
         self.session = requests.Session()
-        token = settings.LICHESS_API_TOKEN
+        token = api_token or settings.LICHESS_API_TOKEN
         if token:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
 

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ tournament.name }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'club:tournament_list' %}">Tournaments</a></li>
+            <li class="breadcrumb-item active">{{ tournament.name }}</li>
+        </ol>
+    </nav>
+    <h1 class="h3">{{ tournament.name }}</h1>
+    <p class="text-muted small">
+        {{ tournament.get_status_display }} · {{ tournament.rounds_played }}/{{ tournament.rounds_target }} rounds
+        {% if tournament.counts_for_club_elo %}· counts for OTB club ELO{% endif %}
+        {% if tournament.venue %}<br>{{ tournament.venue }}{% endif %}
+    </p>
+
+    <h2 class="h5 mt-4 mb-2">Standings</h2>
+    <div class="table-responsive mb-5">
+        <table class="table table-sm align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>#</th><th>Player</th><th>Pts</th><th>W</th><th>D</th><th>L</th><th>G</th><th>Buchholz</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for r in standings %}
+            <tr>
+                <td>{{ r.rank }}</td>
+                <td><a href="{% url 'club:member_detail' r.member_id %}">{{ r.name }}</a></td>
+                <td>{{ r.points }}</td>
+                <td>{{ r.wins }}</td>
+                <td>{{ r.draws }}</td>
+                <td>{{ r.losses }}</td>
+                <td>{{ r.played }}</td>
+                <td>{{ r.buchholz }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-muted">Standings populate after pairings and results.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="h5 mb-2">Rounds &amp; pairings</h2>
+    {% for rnd in rounds %}
+    <section class="mb-4">
+        <div class="fw-semibold mb-2">Round {{ rnd.number }}</div>
+        <ul class="list-group list-group-flush border rounded">
+            {% for p in rnd.pairings.all %}
+            <li class="list-group-item small d-flex justify-content-between flex-wrap gap-2">
+                <span>B{{ p.board }} · {{ p.white }}
+                    {% if p.black %} vs {{ p.black }}{% else %} (bye){% endif %}
+                </span>
+                <span class="text-muted">{% if p.result %}{{ p.get_result_display }}{% else %}Pending{% endif %}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted small">No boards yet.</li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% empty %}
+    <p class="text-muted small">Rounds appear after organisers generate pairings.</p>
+    {% endfor %}
+</div>
+{% endblock %}

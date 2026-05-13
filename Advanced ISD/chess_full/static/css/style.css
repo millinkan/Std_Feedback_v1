@@ -1,0 +1,121 @@
+/* Thin layer on theme.css — layout polish for club pages */
+
+main {
+    min-height: 60vh;
+}
+
+.hero-muted {
+    background: var(--eschen-hero-gradient);
+}
+
+.table-rank-col {
+    width: 4rem;
+}
+
+.letter-spacing {
+    letter-spacing: 0.08em;
+}
+
+.home-stat-row {
+    --bs-gutter-y: 0.75rem;
+}
+
+.home-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.home-stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--bs-heading-color);
+}
+
+.home-stat-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bs-secondary-color);
+}
+
+.home-section .card {
+    border-radius: 0.5rem;
+}
+
+.home-rank-list .list-group-item {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.home-announcements .home-announcement-item:last-child {
+    border-bottom: 0 !important;
+}
+
+@media (min-width: 992px) {
+    .home-announcements {
+        max-height: 28rem;
+        overflow-y: auto;
+    }
+}
+
+/* Member avatars (uploaded or initials fallback) */
+.member-avatar-img {
+    border: 2px solid rgba(0, 0, 0, 0.06);
+    flex-shrink: 0;
+}
+
+.member-avatar-placeholder {
+    color: #fff;
+    background: linear-gradient(145deg, #3d5a80, #1d3557);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
+}
+
+.table-avatar-col {
+    width: 3.25rem;
+}
+
+.member-profile-head .member-avatar-img {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.club-history .timeline-markers {
+    padding-left: 1.1rem;
+    max-width: 40rem;
+}
+
+.club-history .timeline-markers li + li {
+    margin-top: 0.65rem;
+}
+
+/* Matched heights for “Elo curve” vs “Skill radar” cards despite different blurb length */
+.dashboard-pair-intro {
+    /* Reserve space for multi-line Elo blurb so both chart slots align */
+    min-height: 5.25rem;
+}
+
+/* Chart.js slot: min height + flex fill inside stretched cards */
+.dashboard-chart-canvas {
+    position: relative;
+    flex: 1 1 280px;
+    min-height: 280px;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Game analysis: subtle row tint by classification */
+.game-move-table .move-row-blunder > td {
+    background-color: rgba(220, 53, 69, 0.07);
+}
+.game-move-table .move-row-mistake > td {
+    background-color: rgba(253, 126, 20, 0.08);
+}
+.game-move-table .move-row-inaccuracy > td {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+.game-move-table .move-row-best > td,
+.game-move-table .move-row-excellent > td {
+    background-color: rgba(25, 135, 84, 0.06);
+}

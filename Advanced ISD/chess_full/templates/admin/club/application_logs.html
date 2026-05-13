@@ -1,0 +1,122 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Application logs{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{% if refresh_interval %}
+<meta http-equiv="refresh" content="{{ refresh_interval }}">
+{% endif %}
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo;
+    <a href="{% url 'admin_application_logs' %}">{% translate 'Diagnostics' %}</a>
+    &rsaquo; {% translate 'Application logs' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="app-log-viewer">
+    <div class="app-log-viewer__header">
+        <div>
+            <h1 class="app-log-viewer__title">{% translate 'Application logs' %}</h1>
+            <p class="app-log-viewer__subtitle">
+                {% translate 'Tail of the rotating file logger (read-only). For incident response and error analysis.' %}
+            </p>
+        </div>
+        {% if log_exists %}
+        <a class="button default" href="{% url 'admin_application_logs' %}?download=1&amp;file={{ log_basename|urlencode }}">
+            {% translate 'Download this file' %}
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="module app-log-viewer__meta">
+        <h2>{% translate 'File' %}</h2>
+        <table class="app-log-viewer__meta-table">
+            <tr><th scope="row">{% translate 'Path' %}</th><td><code>{{ log_path }}</code></td></tr>
+            <tr><th scope="row">{% translate 'Directory' %}</th><td><code>{{ logs_dir }}</code></td></tr>
+            {% if log_stat %}
+            <tr><th scope="row">{% translate 'Size' %}</th><td>{{ log_stat.size_bytes }} {% translate 'bytes' %}</td></tr>
+            <tr><th scope="row">{% translate 'Modified (UTC)' %}</th><td>{{ log_stat.modified|date:"Y-m-d H:i:s" }}</td></tr>
+            {% endif %}
+            <tr><th scope="row">{% translate 'Lines shown' %}</th><td>{{ line_count }} <span class="quiet">({% translate 'after filters' %})</span></td></tr>
+        </table>
+    </div>
+
+    <div class="module app-log-viewer__controls">
+        <h2>{% translate 'View options' %}</h2>
+        <form method="get" class="app-log-viewer__form">
+            <div class="app-log-viewer__field">
+                <label for="id_file">{% translate 'Log file' %}</label>
+                <select name="file" id="id_file">
+                    {% for f in log_files %}
+                    <option value="{{ f.name }}" {% if f.name == log_basename %}selected{% endif %}>{{ f.name }}</option>
+                    {% empty %}
+                    <option value="application.log" {% if log_basename == 'application.log' %}selected{% endif %}>application.log</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="app-log-viewer__field">
+                <label for="id_lines">{% translate 'Tail lines (max)' %}</label>
+                <select name="lines" id="id_lines">
+                    {% for n in line_presets %}
+                    <option value="{{ n }}" {% if lines_param == n %}selected{% endif %}>{{ n }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="app-log-viewer__field">
+                <label for="id_level">{% translate 'Level filter' %}</label>
+                <select name="level" id="id_level">
+                    <option value="ALL" {% if level_filter == 'ALL' %}selected{% endif %}>ALL</option>
+                    <option value="DEBUG" {% if level_filter == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                    <option value="INFO" {% if level_filter == 'INFO' %}selected{% endif %}>INFO</option>
+                    <option value="WARNING" {% if level_filter == 'WARNING' %}selected{% endif %}>WARNING</option>
+                    <option value="ERROR" {% if level_filter == 'ERROR' %}selected{% endif %}>ERROR</option>
+                    <option value="CRITICAL" {% if level_filter == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+                </select>
+            </div>
+            <div class="app-log-viewer__field">
+                <label for="id_refresh">{% translate 'Auto-refresh (sec)' %}</label>
+                <input type="number" name="refresh" id="id_refresh" min="0" max="300" step="5"
+                       value="{{ refresh_interval|default:0 }}"
+                       placeholder="0">
+            </div>
+            <div class="app-log-viewer__actions">
+                <button type="submit" class="button default">{% translate 'Apply' %}</button>
+                <a href="{% url 'admin_application_logs' %}" class="button">{% translate 'Reset' %}</a>
+            </div>
+        </form>
+        <p class="help app-log-viewer__help">
+            {% translate 'Large files are read from the end only (tail). Rotated archives use names like application.log.1.' %}
+            {% if refresh_interval %}
+            {% blocktranslate with s=refresh_interval %}Page auto-refreshes every {{ s }} seconds.{% endblocktranslate %}
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="module app-log-viewer__output">
+        <h2>{% translate 'Output' %}</h2>
+        {% if lines %}
+        <div class="app-log-viewer__scroll" role="region" aria-label="{% translate 'Log output' %}">
+            <table class="app-log-viewer__table">
+                <tbody>
+                    {% for row in lines %}
+                    <tr class="app-log-viewer__row {{ row.level_class }}">
+                        <td class="app-log-viewer__ln">{{ forloop.counter }}</td>
+                        <td class="app-log-viewer__text"><code>{{ row.text|escape }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="quiet">{% translate 'No lines to display (empty file or no matches for the level filter).' %}</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

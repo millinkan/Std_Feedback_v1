@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">My Dashboard</h1>
+        <a href="{% url 'api-docs' %}" class="btn btn-outline-dark btn-sm">Open API Test Console</a>
+    </div>
+    {% if auto_sync_queued %}
+    <div class="alert alert-info">
+        Your dashboard auto-started a background sync from Lichess. Refresh in a few seconds to see latest games.
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">Profile &amp; Lichess API</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button type="submit" name="action" value="save_profile" class="btn btn-primary">Save Settings</button>
+                        <button type="submit" name="action" value="import_games" class="btn btn-outline-success">Import Recent Games</button>
+                    </form>
+                    <p class="small text-muted mt-3 mb-0">API token is stored in your Django profile and used by backend jobs to call Lichess.</p>
+                    <p class="small mt-3 mb-0">
+                        <a href="{% url 'club:totp_manage' %}">Optional member authenticator (TOTP)</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">My Imported Games</div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Game</th>
+                                <th>Result</th>
+                                <th>Played</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for game in games %}
+                            <tr>
+                                <td>{{ game.player_white }} vs {{ game.player_black }}</td>
+                                <td>{{ game.result }}</td>
+                                <td><time datetime="{{ game.played_at|date:'c' }}">{{ game.played_at|date:"M j, Y" }}</time></td>
+                                <td class="d-flex gap-2">
+                                    <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Stockfish</a>
+                                    <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'json' %}" class="btn btn-sm btn-outline-secondary">JSON</a>
+                                    <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'csv' %}" class="btn btn-sm btn-outline-secondary">CSV</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-muted">No games imported yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1 align-items-stretch">
+        <div class="col-lg-6 d-flex">
+            <div class="card border-0 shadow-sm w-100 d-flex flex-column">
+                <div class="card-header bg-white fw-semibold">Elo curve (imported online games)</div>
+                <div class="card-body d-flex flex-column flex-grow-1 pt-3">
+                    <div class="dashboard-pair-intro small text-muted mb-2 flex-shrink-0">
+                        <p class="mb-0">
+                            Synthetic path from imports in chronological order (each player starts from their stored club OTB when first seen).
+                            Updates do not overwrite your leaderboard OTB rating.
+                        </p>
+                    </div>
+                    <div class="dashboard-chart-canvas flex-grow-1 flex-shrink-0" aria-hidden="true"><canvas id="eloProgressChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 d-flex">
+            <div class="card border-0 shadow-sm w-100 d-flex flex-column">
+                <div class="card-header bg-white fw-semibold">Skill radar (Stockfish)</div>
+                <div class="card-body d-flex flex-column flex-grow-1 pt-3">
+                    <div class="dashboard-pair-intro small text-muted mb-2 flex-shrink-0">
+                        <p class="mb-0">Opening / middle / endgame CPL heuristics from completed analyses.</p>
+                    </div>
+                    <div class="dashboard-chart-canvas flex-grow-1 flex-shrink-0 position-relative" aria-hidden="true"><canvas id="skillRadarChart"></canvas></div>
+                    <p id="skillRadarEmptyHint" class="small text-muted text-center mb-0 mt-2 d-none" role="status"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                    <span>Imported online · standings</span>
+                    <small class="text-muted">Refetches every 90s while this tab is visible</small>
+                </div>
+                <div class="px-3 pt-2 small text-muted">
+                    Buchholz-style table from stored Lichess imports; official Swiss events live under
+                    <a href="{% url 'club:tournament_list' %}">Tournaments</a>. W / D / L as usual.
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0" id="standingsTable">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Player</th>
+                            <th>Points</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
+                            <th>Played</th>
+                            <th>Buchholz</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in metrics.standings %}
+                            <tr>
+                                <td>{{ row.rank }}</td>
+                                <td>{{ row.name }}</td>
+                                <td>{{ row.points }}</td>
+                                <td>{{ row.wins }}</td>
+                                <td>{{ row.draws }}</td>
+                                <td>{{ row.losses }}</td>
+                                <td>{{ row.played }}</td>
+                                <td>{{ row.buchholz }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="8" class="text-muted">No standings data yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ metrics|json_script:"dashboard-metrics-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script>
+    const initialMetrics = JSON.parse(document.getElementById('dashboard-metrics-data').textContent);
+    let eloChart;
+    let radarChart;
+
+    /** Stops endless “replay” tweening whenever /dashboard/metrics polls. */
+    const staticChartOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+    };
+
+    function eloVerticalBounds(series) {
+        const ys = (series || []).filter((v) => typeof v === 'number' && Number.isFinite(v));
+        if (!ys.length) {
+            return { min: 1350, max: 1650 };
+        }
+        let lo = Math.min(...ys);
+        let hi = Math.max(...ys);
+        const pad = Math.max(40, Math.round((hi - lo) * 0.12));
+        lo -= pad;
+        hi += pad;
+        lo = Math.max(600, Math.floor(lo / 10) * 10);
+        hi = Math.min(3000, Math.ceil(hi / 10) * 10);
+        if (hi - lo < 120) {
+            const mid = (hi + lo) / 2;
+            lo = Math.max(600, mid - 60);
+            hi = Math.min(3000, mid + 60);
+        }
+        return { min: lo, max: hi };
+    }
+
+    function renderElo(data) {
+        const labels = (data || []).map(p => p.x);
+        const values = (data || []).map(p => p.y);
+        const ctx = document.getElementById('eloProgressChart').getContext('2d');
+        const yb = eloVerticalBounds(values);
+        if (eloChart) {
+            eloChart.data.labels = labels;
+            eloChart.data.datasets[0].data = values;
+            eloChart.options.scales.y.min = yb.min;
+            eloChart.options.scales.y.max = yb.max;
+            eloChart.update('none');
+            return;
+        }
+        eloChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Online (imports)',
+                    data: values,
+                    borderColor: '#1f5f99',
+                    backgroundColor: 'rgba(31,95,153,0.15)',
+                    fill: true,
+                    tension: 0,
+                    spanGaps: true,
+                }]
+            },
+            options: {
+                ...staticChartOpts,
+                scales: {
+                    x: {
+                        ticks: { maxRotation: 45, minRotation: 30, autoSkip: true, maxTicksLimit: 12 },
+                    },
+                    y: {
+                        min: yb.min,
+                        max: yb.max,
+                        ticks: { precision: 0, maxTicksLimit: 8 },
+                    },
+                },
+            },
+        });
+    }
+
+    function renderRadar(radarData) {
+        const labels = (radarData && radarData.labels && radarData.labels.length)
+            ? radarData.labels
+            : ['Opening Accuracy', 'Middlegame Accuracy', 'Endgame Accuracy', 'Tactical Safety'];
+        const values = (radarData && radarData.values && radarData.values.length)
+            ? radarData.values.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))
+            : [0, 0, 0, 0];
+        const ctx = document.getElementById('skillRadarChart').getContext('2d');
+        if (radarChart) {
+            radarChart.data.labels = labels;
+            radarChart.data.datasets[0].data = values;
+            radarChart.update('none');
+            return;
+        }
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Skill profile',
+                    data: values,
+                    borderColor: '#2b9348',
+                    backgroundColor: 'rgba(43,147,72,0.22)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                ...staticChartOpts,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 100,
+                        beginAtZero: true,
+                        ticks: { stepSize: 25, backdropColor: 'transparent' },
+                        grid: { color: 'rgba(0,0,0,0.08)' },
+                        angleLines: { color: 'rgba(0,0,0,0.08)' },
+                    },
+                },
+            },
+        });
+    }
+
+    function setSkillRadarHint(metrics) {
+        const el = document.getElementById('skillRadarEmptyHint');
+        if (!el) return;
+        const sr = metrics && metrics.skill_radar ? metrics.skill_radar : {};
+        const games = typeof sr.games_analysed === 'number' ? sr.games_analysed : 0;
+        const plies = typeof sr.plies_sampled === 'number' ? sr.plies_sampled : 0;
+        if (games === 0 || plies === 0) {
+            el.textContent = 'No move-level Stockfish data yet. Finish at least one game analysis to populate this radar.';
+            el.classList.remove('d-none');
+        } else {
+            el.classList.add('d-none');
+        }
+    }
+
+    function renderStandings(rows) {
+        const tbody = document.querySelector('#standingsTable tbody');
+        tbody.innerHTML = '';
+        if (!rows || !rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-muted">No standings data yet.</td></tr>';
+            return;
+        }
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${row.rank}</td>
+                <td>${row.name}</td>
+                <td>${row.points}</td>
+                <td>${row.wins}</td>
+                <td>${row.draws}</td>
+                <td>${row.losses}</td>
+                <td>${row.played}</td>
+                <td>${row.buchholz}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderAll(metrics) {
+        renderElo(metrics.elo_progress || []);
+        renderRadar(metrics.skill_radar || {labels: [], values: []});
+        setSkillRadarHint(metrics);
+        renderStandings(metrics.standings || []);
+    }
+
+    async function refreshMetrics() {
+        if (document.visibilityState !== 'visible') {
+            return;
+        }
+        try {
+            const response = await fetch('{% url "club:dashboard_metrics" %}', {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            if (!response.ok) return;
+            const data = await response.json();
+            renderAll(data);
+        } catch (e) {
+            console.debug('Dashboard refresh skipped:', e);
+        }
+    }
+
+    renderAll(initialMetrics);
+
+    let pollMs = 90000;
+    setInterval(refreshMetrics, pollMs);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refreshMetrics();
+        }
+    });
+</script>
+{% endblock %}

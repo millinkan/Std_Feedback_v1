@@ -1,59 +1,205 @@
 {% extends "base.html" %}
+{% load member_tags %}
 
-{% block title %}Chess Club Dashboard{% endblock %}
+{% block title %}Eschen Chess Club{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Chess Club Dashboard</h1>
-        <a class="btn btn-outline-secondary" href="/admin/">Admin</a>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-semibold">Members</div>
-                <div class="list-group list-group-flush">
-                    {% for member in members %}
-                    <a href="{% url 'club:member_detail' member.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between">
-                        <span>{{ member.display_name }}</span>
-                        <span class="text-muted">@{{ member.lichess_username|default:"n/a" }}</span>
-                    </a>
-                    {% empty %}
-                    <div class="list-group-item text-muted">No members yet.</div>
-                    {% endfor %}
+<div class="hero-muted text-white py-5 mb-0">
+    <div class="container py-lg-2">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <p class="text-uppercase small fw-semibold letter-spacing mb-2 opacity-75">Eschen · Liechtenstein</p>
+                <h1 class="display-6 fw-semibold mb-3">Club portal for OTB play, ratings, and member news</h1>
+                <p class="lead mb-0 opacity-90 col-xl-10">
+                    OTB scheduling, Swiss tournament rounds with admin-generated pairings, and a clear public face for new joiners.
+                    Optional Lichess import and Stockfish tools stay on the member dashboard.
+                </p>
+            </div>
+            <div class="col-lg-4 mt-4 mt-lg-0">
+                <div class="d-flex flex-column gap-2">
+                    {% if user.is_authenticated %}
+                        <a class="btn btn-light btn-lg" href="{% url 'club:dashboard' %}">My dashboard</a>
+                    {% else %}
+                        <a class="btn btn-light btn-lg" href="{% url 'club:register' %}">Create account</a>
+                        <a class="btn btn-outline-light" href="{% url 'club:login' %}">Sign in</a>
+                    {% endif %}
+                    <a class="btn btn-outline-light" href="{% url 'club:leaderboard' %}">Full leaderboard</a>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-semibold">Recent Games</div>
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead>
-                            <tr>
-                                <th>Game</th>
-                                <th>Result</th>
-                                <th>Played</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for game in recent_games %}
-                            <tr>
-                                <td>{{ game.player_white }} vs {{ game.player_black }}</td>
-                                <td>{{ game.result }}</td>
-                                <td>{{ game.played_at|date:"Y-m-d H:i" }}</td>
-                                <td><a href="{% url 'ai_pipeline:game_embed' game.pk %}" class="btn btn-sm btn-primary">Open</a></td>
-                            </tr>
-                        {% empty %}
-                            <tr><td colspan="4" class="text-muted">No games imported yet.</td></tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+<div class="bg-body-tertiary border-bottom py-3">
+    <div class="container">
+        <div class="row g-3 text-center text-md-start home-stat-row" role="region" aria-label="Club summary">
+            <div class="col-6 col-md-3">
+                <div class="home-stat">
+                    <span class="home-stat-value">{{ home_stats.member_total }}</span>
+                    <span class="home-stat-label">Members</span>
                 </div>
             </div>
+            <div class="col-6 col-md-3">
+                <div class="home-stat">
+                    <span class="home-stat-value">{{ home_stats.upcoming_total }}</span>
+                    <span class="home-stat-label">Upcoming OTB</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="home-stat">
+                    <span class="home-stat-value">{{ home_stats.announcement_total }}</span>
+                    <span class="home-stat-label">Announcements</span>
+                </div>
+            </div>
+            <div class="col-12 col-md-3 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'club:about' %}#club-history">Club history</a>
+                <a class="btn btn-sm btn-dark" href="{% url 'club:about' %}">Contact</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4 mb-2">
+        <div class="col-lg-4">
+            <section class="home-section h-100" aria-labelledby="home-top-ratings">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 id="home-top-ratings" class="h5 mb-0 fw-semibold">Top club ratings</h2>
+                    <a class="small text-decoration-none" href="{% url 'club:leaderboard' %}">View all</a>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <ol class="list-group list-group-flush list-group-numbered mb-0 home-rank-list">
+                        {% for m in top_players %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
+                                    {% member_avatar m 40 %}
+                                    <div class="min-w-0">
+                                        <a class="fw-medium text-truncate d-block" href="{% url 'club:member_detail' m.pk %}">{{ m.display_name }}</a>
+                                        <span class="small text-muted">OTB {{ m.wins }}W · {{ m.draws }}D · {{ m.losses }}L</span>
+                                    </div>
+                                </div>
+                                <span class="badge text-bg-light text-nowrap">{{ m.elo_rating|floatformat:0 }} ELO</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">No rated members yet. Add members and completed matches in admin, or run <code class="small">python manage.py create_sample_data</code>.</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="home-section h-100" aria-labelledby="home-upcoming">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 id="home-upcoming" class="h5 mb-0 fw-semibold">Upcoming OTB matches</h2>
+                    <a class="small text-decoration-none" href="{% url 'club:matches' %}?tab=upcoming">Schedule</a>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <ul class="list-group list-group-flush mb-0">
+                        {% for mt in upcoming_matches %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <a class="fw-medium" href="{% url 'club:match_detail' mt.pk %}">{{ mt.white_player }} vs {{ mt.black_player }}</a>
+                                    <time class="small text-muted text-nowrap" datetime="{{ mt.scheduled_at|date:'c' }}">{{ mt.scheduled_at|date:'D d M, H:i' }}</time>
+                                </div>
+                                {% if mt.venue %}<div class="small text-muted mt-1">{{ mt.venue }}</div>{% endif %}
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">Nothing on the calendar. Organisers can schedule matches in the admin.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="home-section h-100" aria-labelledby="home-announcements">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 id="home-announcements" class="h5 mb-0 fw-semibold">Announcements</h2>
+                </div>
+                <div class="card border-0 shadow-sm home-announcements">
+                    {% for ann in announcements %}
+                        <article class="border-bottom px-3 py-3 home-announcement-item">
+                            <h3 class="h6 mb-1">{{ ann.title }}</h3>
+                            <p class="small text-muted mb-2">
+                                <time datetime="{{ ann.published_at|date:'c' }}">{{ ann.published_at|date:'j F Y' }}</time>
+                                {% if ann.author %} · {{ ann.author.get_username }}{% endif %}
+                            </p>
+                            <p class="small mb-0 text-body-secondary">{{ ann.body|truncatechars:200 }}</p>
+                        </article>
+                    {% empty %}
+                        <div class="p-3 text-muted">No announcements yet.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-lg-5">
+            <section aria-labelledby="home-members">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h2 id="home-members" class="h5 mb-0 fw-semibold">Recent members</h2>
+                    <span class="small text-muted">Newest joins first</span>
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <ul class="list-group list-group-flush mb-0">
+                        {% for member in recent_members %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 min-w-0">
+                                    {% member_avatar member 36 %}
+                                    <a class="text-truncate" href="{% url 'club:member_detail' member.pk %}">{{ member.display_name }}</a>
+                                </div>
+                                <span class="small text-muted text-truncate" style="max-width: 9rem;">@{{ member.lichess_username|default:"—" }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">No members in the directory.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-7">
+            <section aria-labelledby="home-pipeline">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h2 id="home-pipeline" class="h5 mb-0 fw-semibold">Imported online games</h2>
+                    {% if user.is_authenticated %}
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'club:dashboard' %}">Import from dashboard</a>
+                    {% endif %}
+                </div>
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Players</th>
+                                    <th scope="col">Result</th>
+                                    <th scope="col">Played</th>
+                                    <th scope="col" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for game in recent_games %}
+                                    <tr>
+                                        <td>{{ game.player_white }} vs {{ game.player_black }}</td>
+                                        <td><span class="font-monospace small">{{ game.result }}</span></td>
+                                        <td><time datetime="{{ game.played_at|date:'c' }}">{{ game.played_at|date:'Y-m-d H:i' }}</time></td>
+                                        <td class="text-end">
+                                            <a href="{% url 'ai_pipeline:game_embed' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Board</a>
+                                            <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Analysis</a>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-muted p-4">No imported games yet. Authenticated members can pull games from Lichess on the dashboard.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 </div>

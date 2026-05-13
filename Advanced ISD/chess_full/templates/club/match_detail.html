@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Match{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:720px;">
+    <a href="{% url 'club:matches' %}" class="small text-muted">&larr; All matches</a>
+    <h1 class="h4 mt-2">{{ match.white_player }} vs {{ match.black_player }}</h1>
+    <dl class="row mt-4">
+        <dt class="col-sm-4">Status</dt>
+        <dd class="col-sm-8">{{ match.get_status_display }}</dd>
+        {% if match.result %}
+        <dt class="col-sm-4">Result</dt>
+        <dd class="col-sm-8">{{ match.result }}</dd>
+        {% endif %}
+        <dt class="col-sm-4">Scheduled</dt>
+        <dd class="col-sm-8">{{ match.scheduled_at|date:'Y-m-d H:i' }}</dd>
+        {% if match.completed_at %}
+        <dt class="col-sm-4">Completed</dt>
+        <dd class="col-sm-8">{{ match.completed_at|date:'Y-m-d H:i' }}</dd>
+        {% endif %}
+        {% if match.venue %}
+        <dt class="col-sm-4">Venue</dt>
+        <dd class="col-sm-8">{{ match.venue }}</dd>
+        {% endif %}
+    </dl>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'club:member_detail' match.white_player_id %}">{{ match.white_player }} profile</a>
+        <a class="btn btn-outline-dark btn-sm" href="{% url 'club:member_detail' match.black_player_id %}">{{ match.black_player }} profile</a>
+    </div>
+</div>
+{% endblock %}

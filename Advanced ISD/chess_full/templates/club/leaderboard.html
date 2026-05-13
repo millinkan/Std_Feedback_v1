@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load member_tags %}
+
+{% block title %}Leaderboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <h1 class="h3 mb-0">Leaderboard</h1>
+        <div class="btn-group">
+            <a class="btn btn-sm {% if sort == 'elo' %}btn-dark{% else %}btn-outline-secondary{% endif %}"
+               href="?sort=elo">By club ELO</a>
+            <a class="btn btn-sm {% if sort == 'winpct' %}btn-dark{% else %}btn-outline-secondary{% endif %}"
+               href="?sort=winpct">By win rate</a>
+        </div>
+    </div>
+    <div class="table-responsive card border-0 shadow-sm">
+        <table class="table table-striped mb-0">
+            <thead class="table-light">
+            <tr>
+                <th class="table-rank-col">#</th>
+                <th class="table-avatar-col" scope="col"><span class="visually-hidden">Photo</span></th>
+                <th>Member</th>
+                <th>Club ELO</th>
+                <th>W</th>
+                <th>D</th>
+                <th>L</th>
+                <th>Win%</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for m in members %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="align-middle">{% member_avatar m 36 %}</td>
+                    <td class="align-middle"><a href="{% url 'club:member_detail' m.pk %}">{{ m.display_name }}</a></td>
+                    <td>{{ m.elo_rating|floatformat:0 }}</td>
+                    <td>{{ m.wins }}</td>
+                    <td>{{ m.draws }}</td>
+                    <td>{{ m.losses }}</td>
+                    <td>
+                        {% if sort == 'winpct' %}
+                            {{ m.win_pct|floatformat:2 }}
+                        {% else %}
+                            {{ m.win_percentage }}
+                        {% endif %}%
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-muted p-4">Record club matches from the admin to populate standings.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

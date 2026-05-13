@@ -5,3 +5,15 @@ redis
 requests
 python-chess
 stockfish
+djangorestframework
+drf-spectacular
+python-decouple
+whitenoise
+django-crispy-forms
+crispy-bootstrap5
+django-otp
+qrcode
+psycopg2-binary
+django-allauth>=65.0
+PyJWT>=2.8.0
+cryptography>=42.0.0

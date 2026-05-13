@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{# Skip admin/dark_mode.css + theme.js so OS "dark mode" does not force low-contrast admin UI. #}
+{% block dark-mode-vars %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div class="brand-wrap">
+    <h1 id="site-name"><a href="{% url 'admin:index' %}">Eschen Chess Club Control Center</a></h1>
+    <span class="brand-subtitle">AI Pipeline • Membership • Analytics</span>
+</div>
+{% endblock %}
+
+{% block nav-global %}
+{% if request.user.is_staff %}
+{% if not app_log_admin_superuser_only or request.user.is_superuser %}
+<a href="{% url 'admin_application_logs' %}" class="app-log-nav-link">{% trans "Application logs" %}</a>
+{% endif %}
+{% endif %}
+{% endblock %}

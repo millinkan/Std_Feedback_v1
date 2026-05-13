@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Teams{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">Teams</h1>
+    <div class="row g-3">
+        {% for team in teams %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h2 class="h5"><a href="{% url 'club:team_detail' team.slug %}">{{ team.name }}</a></h2>
+                        {% if team.description %}<p class="small text-muted mb-2">{{ team.description }}</p>{% endif %}
+                        <span class="badge text-bg-light">{{ team.teammembership_set.count }} members</span>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-muted">No teams configured yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

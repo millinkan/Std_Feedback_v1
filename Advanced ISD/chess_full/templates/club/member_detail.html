@@ -1,19 +1,74 @@
 {% extends "base.html" %}
+{% load member_tags %}
 
 {% block title %}{{ member.display_name }}{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h1 class="h3 mb-0">{{ member.display_name }}</h1>
-            <p class="text-muted mb-0">@{{ member.lichess_username|default:"n/a" }}</p>
+    <div class="member-profile-head card border-0 shadow-sm mb-4 overflow-hidden">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-4 p-4">
+            <div class="d-flex flex-wrap align-items-start gap-4">
+                {% member_avatar member 112 %}
+                <div>
+                    <h1 class="h3 mb-1">{{ member.display_name }}</h1>
+                    <p class="text-muted mb-2">Lichess: @{{ member.lichess_username|default:"—" }}</p>
+                    <p class="small mb-0 text-body-secondary">
+                        Club ELO <strong class="text-body">{{ member.elo_rating|floatformat:0 }}</strong>
+                        · OTB {{ member.wins }}W · {{ member.draws }}D · {{ member.losses }}L
+                        · Win rate {{ member.win_percentage }}%
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-self-start ms-md-auto">
+                {% if user.is_authenticated and member.user_id == user.id %}
+                    <a href="{% url 'club:member_profile_edit' member.pk %}" class="btn btn-outline-dark btn-sm">Edit profile &amp; photo</a>
+                {% endif %}
+                <a href="{% url 'ai_pipeline:player_insights' member.pk %}" class="btn btn-primary btn-sm">AI insights</a>
+            </div>
         </div>
-        <a href="{% url 'ai_pipeline:player_insights' member.pk %}" class="btn btn-primary">View AI Insights</a>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white fw-semibold">Games</div>
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">OTB club matches</div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead><tr><th>Match</th><th>Result</th><th>Date</th></tr></thead>
+                        <tbody>
+                        {% for mt in club_matches %}
+                            <tr>
+                                <td><a href="{% url 'club:match_detail' mt.pk %}">{{ mt.white_player }} vs {{ mt.black_player }}</a></td>
+                                <td>{{ mt.result|default:"—" }}</td>
+                                <td>{{ mt.scheduled_at|date:'Y-m-d' }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-muted">No OTB matches yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-semibold">Recent ELO changes (OTB)</div>
+                <ul class="list-group list-group-flush">
+                    {% for row in elo_hist %}
+                        <li class="list-group-item small d-flex justify-content-between">
+                            <span>{{ row.rating_before|floatformat:0 }} → {{ row.rating_after|floatformat:0 }}</span>
+                            <a href="{% url 'club:match_detail' row.match_id %}">Match</a>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted">No rating history recorded.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white fw-semibold">Imported Lichess games (pipeline)</div>
         <div class="table-responsive">
             <table class="table mb-0">
                 <thead>
@@ -29,11 +84,11 @@
                     <tr>
                         <td>{{ game.player_white }} vs {{ game.player_black }}</td>
                         <td>{{ game.result }}</td>
-                        <td>{{ game.played_at|date:"Y-m-d H:i" }}</td>
-                        <td><a href="{% url 'ai_pipeline:game_analysis' game.pk %}" class="btn btn-sm btn-outline-primary">Analysis</a></td>
+                        <td>{{ game.played_at|date:'Y-m-d H:i' }}</td>
+                        <td><a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Analysis</a></td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="4" class="text-muted">No games yet for this member.</td></tr>
+                    <tr><td colspan="4" class="text-muted">No online games synced for this profile.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

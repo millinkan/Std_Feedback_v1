@@ -1,0 +1,41 @@
+@import url('brand.css');
+
+/* One site-wide surface (homepage palette); accent themes are folded to the same surfaces */
+body.theme-classic,
+body.theme-midnight,
+body.theme-forest,
+body.theme-royal {
+    background: var(--eschen-body-bg);
+    color: var(--eschen-body-color);
+}
+
+body.theme-classic .card,
+body.theme-midnight .card,
+body.theme-forest .card,
+body.theme-royal .card {
+    background: var(--eschen-card-bg);
+    color: var(--eschen-body-color);
+}
+
+body.theme-classic .card-header,
+body.theme-midnight .card-header,
+body.theme-forest .card-header,
+body.theme-royal .card-header {
+    background: var(--eschen-card-bg) !important;
+    color: var(--eschen-body-color);
+}
+
+body.theme-classic .table,
+body.theme-midnight .table,
+body.theme-forest .table,
+body.theme-royal .table {
+    color: var(--eschen-body-color);
+}
+
+.navbar.navbar-dark.bg-dark {
+    background-color: var(--eschen-nav-bg) !important;
+}
+
+.site-footer {
+    background-color: var(--eschen-body-bg);
+}

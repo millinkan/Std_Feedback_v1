@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Verify sign-in{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 420px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="h5 mb-2">Authenticator code</h1>
+            <p class="small text-muted mb-3">
+                Enter the 6‑digit code from your authenticator app to finish signing in.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next_path }}">
+                <div class="mb-3">
+                    <label class="form-label" for="otp_token">Code</label>
+                    <input class="form-control form-control-lg" id="otp_token" name="otp_token" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9 ]*" autofocus placeholder="------">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Continue</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

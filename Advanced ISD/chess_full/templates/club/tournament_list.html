@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Tournaments{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3 mb-3">Swiss tournaments</h1>
+    <p class="text-muted small mb-4">
+        Organisers configure events in the admin console; results can flow into OTB club ELO when enabled for the tournament.
+    </p>
+    {% if tournaments %}
+    <ul class="list-group shadow-sm">
+        {% for t in tournaments %}
+        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <a class="fw-semibold text-decoration-none" href="{% url 'club:tournament_detail' t.slug %}">{{ t.name }}</a>
+                <div class="small text-muted">{{ t.get_status_display }} · rounds {{ t.rounds_played }}/{{ t.rounds_target }}</div>
+            </div>
+            {% if t.venue %}<span class="small text-muted">{{ t.venue }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">No published tournaments yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

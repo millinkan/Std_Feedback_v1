@@ -1,0 +1,17 @@
+/*
+ * Eschen club palette — shared by public Bootstrap pages and Django admin.
+ * Matches home: Bootstrap bg-dark navbar, grey page background, blue primary accents.
+ */
+:root {
+    --eschen-body-bg: #f8f9fa;
+    --eschen-body-color: #212529;
+    --eschen-nav-bg: #212529;
+    --eschen-primary: #0d6efd;
+    --eschen-primary-hover: #0b5ed7;
+    --eschen-hero-gradient: linear-gradient(
+        135deg,
+        rgba(33, 37, 41, 0.92),
+        rgba(13, 110, 253, 0.35)
+    );
+    --eschen-card-bg: #ffffff;
+}
