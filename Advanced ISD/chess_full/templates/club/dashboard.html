@@ -53,9 +53,8 @@
                                 <td>{{ game.player_white }} vs {{ game.player_black }}</td>
                                 <td>{{ game.result }}</td>
                                 <td><time datetime="{{ game.played_at|date:'c' }}">{{ game.played_at|date:"M j, Y" }}</time></td>
-                                <td class="d-flex flex-wrap gap-2">
-                                    <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Initial analysis</a>
-                                    <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Visuals with details</a>
+                                <td class="d-flex gap-2">
+                                    <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Stockfish</a>
                                     <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'json' %}" class="btn btn-sm btn-outline-secondary">JSON</a>
                                     <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'csv' %}" class="btn btn-sm btn-outline-secondary">CSV</a>
                                 </td>
