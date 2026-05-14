@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Analysis - {{ game.player_white }} vs {{ game.player_black }}{% endblock %}
+{% block title %}Visuals — {{ game.player_white }} vs {{ game.player_black }}{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
@@ -28,15 +28,19 @@
 </style>
 <div class="container my-4">
     <h2 class="mb-1">{{ game.player_white }} vs {{ game.player_black }}</h2>
-    <p class="text-muted mb-4">
+    <p class="text-muted mb-2">
         <time datetime="{{ game.played_at|date:'c' }}">{{ game.played_at|date:"M j, Y" }} {{ game.played_at|date:"H:i" }}</time> · {{ game.time_control }} · Result: <strong>{{ game.result }}</strong>
         {% if game.lichess_game_id %}
             · <a href="https://lichess.org/{{ game.lichess_game_id }}" target="_blank" rel="noopener" class="small">View on Lichess <i class="bi bi-box-arrow-up-right"></i></a>
         {% endif %}
     </p>
+    <p class="small text-muted mb-3 border-start border-3 border-primary ps-2">
+        Extra report: how the evaluation evolved and where the largest swings occurred.
+        Use <strong>Initial analysis</strong> for the full Stockfish move list and written report.
+    </p>
     {% if analysis and analysis.status == 'completed' %}
     <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-        <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Classic report</a>
+        <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Initial analysis</a>
         <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'json' %}" class="btn btn-sm btn-outline-dark">Download JSON</a>
         <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'csv' %}" class="btn btn-sm btn-outline-dark">Download CSV</a>
     </div>
@@ -49,6 +53,45 @@
     {% elif analysis.status == 'failed' %}
         <div class="alert alert-danger"><strong>Analysis failed.</strong> {{ analysis.error_message }}</div>
     {% else %}
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">Game evolution</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Engine evaluation after each half-move, in pawns from White’s perspective (+ = White better).
+                    Red markers highlight the largest absolute eval swings (sharp changes on the board).
+                </p>
+                <div class="position-relative" style="min-height: 260px;">
+                    <canvas id="ai-eval-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">Largest eval swings</div>
+            <div class="card-body">
+                <p class="text-muted small mb-0">
+                    Half-moves where the engine score changed the most (absolute swing in centipawns).
+                </p>
+            </div>
+            <ol class="list-group list-group-flush list-group-numbered" id="ai-swing-rankings"></ol>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span>Top swing moments on the board</span>
+                <span class="small text-muted fw-normal">
+                    <span class="ai-legend-dot ai-legend-played"></span> played
+                    <span class="ai-legend-dot ai-legend-best ms-2"></span> engine best
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Positions before the moves that hurt the player the most (largest loss from the mover’s perspective).
+                </p>
+                <div class="row g-3" id="ai-critical-moments"></div>
+            </div>
+        </div>
 
         {% if game.lichess_game_id %}
         <div class="card border-0 shadow-sm mb-4">
@@ -68,138 +111,7 @@
         </div>
         {% endif %}
 
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white fw-semibold">Evaluation over the game</div>
-            <div class="card-body">
-                <canvas id="ai-eval-chart" height="80"></canvas>
-                <p class="text-muted small mb-0 mt-2">
-                    + favours White, &minus; favours Black. Red dots mark the largest eval swings.
-                </p>
-            </div>
-        </div>
-
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <span>Critical Moments</span>
-                <span class="small text-muted fw-normal">
-                    <span class="ai-legend-dot ai-legend-played"></span> your move
-                    <span class="ai-legend-dot ai-legend-best ms-2"></span> engine's best
-                </span>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">
-                    Auto-selected from the three biggest eval swings in the game.
-                </p>
-                <div class="row g-3" id="ai-critical-moments"></div>
-            </div>
-        </div>
-
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white fw-semibold">Detailed Stockfish Report</div>
-            <div class="card-body">
-                <p class="mb-2">{{ report.summary }}</p>
-                <div class="row g-3">
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Your Side</div><div class="fw-semibold">{{ report.user_side }}</div></div></div>
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Your Avg CPL</div><div class="fw-semibold">{{ report.user_avg_cpl }}</div></div></div>
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Opponent Avg CPL</div><div class="fw-semibold">{{ report.opponent_avg_cpl }}</div></div></div>
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Your Error Events</div><div class="fw-semibold">{{ report.user_total_errors }}</div></div></div>
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Opponent Error Events</div><div class="fw-semibold">{{ report.opponent_total_errors }}</div></div></div>
-                    <div class="col-md-4"><div class="p-3 rounded border h-100"><div class="small text-muted">Result vs Opponent</div><div class="fw-semibold">{% if report.user_outperformed %}You outperformed{% else %}Needs improvement{% endif %}</div></div></div>
-                </div>
-                <div class="mt-3">
-                    <div class="fw-semibold mb-2">Priority Areas for Improvement</div>
-                    <ul class="mb-0">
-                        {% for area in report.focus_areas %}
-                        <li>{{ area }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">White Avg CPL</div><div class="fs-3 fw-bold text-primary">{{ analysis.white_avg_centipawn_loss|floatformat:1 }}</div></div></div></div>
-            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Black Avg CPL</div><div class="fs-3 fw-bold text-dark">{{ analysis.black_avg_centipawn_loss|floatformat:1 }}</div></div></div></div>
-            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">White Blunders</div><div class="fs-3 fw-bold text-danger">{{ analysis.white_blunders }}</div></div></div></div>
-            <div class="col-sm-6 col-lg-3"><div class="card text-center h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Black Blunders</div><div class="fs-3 fw-bold text-danger">{{ analysis.black_blunders }}</div></div></div></div>
-        </div>
-
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white fw-semibold">Move list &amp; engine feedback</div>
-            <div class="card-body border-bottom">
-                <p class="small text-muted mb-0">
-                    Quality icons reflect centipawn-loss buckets vs. best engine reply at depth {{ analysis.depth }}.
-                    Scores are shown in pawns from White’s perspective (+ favors White). “Δ (mover)” is the change after this move from the side that played it (positive = you improved your winning chances).
-                </p>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0 game-move-table">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" title="Move quality">Q</th>
-                            <th>Ply</th>
-                            <th>Move</th>
-                            <th>Best</th>
-                            <th>Before</th>
-                            <th>After</th>
-                            <th>Δ (mover)</th>
-                            <th>CPL</th>
-                            <th>Engine note</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for move in moves %}
-                        <tr class="move-row move-row-{{ move.classification }}">
-                            <td class="text-center">
-                                {% if move.classification == 'best' %}
-                                    <i class="bi bi-star-fill text-success" title="Best"></i>
-                                {% elif move.classification == 'excellent' %}
-                                    <i class="bi bi-patch-check-fill text-success" title="Excellent"></i>
-                                {% elif move.classification == 'good' %}
-                                    <i class="bi bi-check-circle-fill text-primary" title="Good"></i>
-                                {% elif move.classification == 'inaccuracy' %}
-                                    <i class="bi bi-dash-circle-fill text-warning" title="Inaccuracy"></i>
-                                {% elif move.classification == 'mistake' %}
-                                    <i class="bi bi-exclamation-octagon-fill text-danger" title="Mistake"></i>
-                                {% else %}
-                                    <i class="bi bi-x-octagon-fill text-danger" title="Blunder"></i>
-                                {% endif %}
-                            </td>
-                            <td class="text-nowrap text-muted">
-                                {% if move.is_white %}{{ move.move_number }}.{% else %}{{ move.move_number }}...{% endif %}
-                            </td>
-                            <td><strong>{{ move.move_san }}</strong></td>
-                            <td class="text-muted">{{ move.best_move_san|default:"—" }}</td>
-                            <td class="text-nowrap font-monospace small">{{ move.eval_before_display }}</td>
-                            <td class="text-nowrap font-monospace small">{{ move.eval_after_display }}</td>
-                            <td class="text-nowrap font-monospace small">{{ move.eval_delta_for_mover_display }}</td>
-                            <td>{{ move.centipawn_loss|floatformat:1 }}</td>
-                            <td class="small">
-                                {% if move.classification == 'blunder' %}
-                                    Severe drop in your position after <strong>{{ move.move_san }}</strong>
-                                    {% if move.best_move_san %} — engine prefers <strong>{{ move.best_move_san }}</strong>{% endif %}
-                                    (CPL {{ move.centipawn_loss|floatformat:0 }}).
-                                {% elif move.classification == 'mistake' %}
-                                    Clear eval loss on <strong>{{ move.move_san }}</strong>
-                                    {% if move.best_move_san %} vs. <strong>{{ move.best_move_san }}</strong>{% endif %}; CPL {{ move.centipawn_loss|floatformat:0 }}.
-                                {% elif move.classification == 'inaccuracy' %}
-                                    Inexact; {% if move.best_move_san %}<strong>{{ move.best_move_san }}</strong> was tighter{% else %}engine finds a stronger resource{% endif %} (CPL {{ move.centipawn_loss|floatformat:0 }}).
-                                {% elif move.classification == 'best' %}
-                                    Top engine move; keeps eval at {{ move.eval_after_display }} after your reply.
-                                {% elif move.classification == 'excellent' %}
-                                    Near-best — Δ {{ move.eval_delta_for_mover_display }}, CPL {{ move.centipawn_loss|floatformat:1 }}.
-                                {% else %}
-                                    Solid — Δ {{ move.eval_delta_for_mover_display }}, CPL {{ move.centipawn_loss|floatformat:1 }}.
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {# ---- Data + scripts for the new educational sections (Lichess iframe, eval graph, critical moments). ---- #}
+        {# ---- Data + scripts for charts and boards ---- #}
         <pre id="ai-pgn-source" hidden>{{ game.pgn|default:"" }}</pre>
         <script id="ai-moves-data" type="application/json">[{% for move in moves %}{"move_number":{{ move.move_number }},"is_white":{{ move.is_white|yesno:"true,false" }},"move_san":"{{ move.move_san|escapejs }}","best_move_san":"{{ move.best_move_san|escapejs }}","eval_before":{{ move.eval_before|default_if_none:"null" }},"eval_after":{{ move.eval_after|default_if_none:"null" }},"centipawn_loss":{{ move.centipawn_loss|default_if_none:"null" }},"classification":"{{ move.classification|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]</script>
 

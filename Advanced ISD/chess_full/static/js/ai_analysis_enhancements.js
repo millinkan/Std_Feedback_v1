@@ -1,9 +1,5 @@
 /*
- * Educational analysis enhancements for the AI pipeline game-analysis page.
- *
- * Reads data from hidden script/pre elements the template emits and renders:
- *   1. Eval line chart (Chart.js)
- *   2. Critical-moment cards (chessboard.js + played vs best highlights)
+ * Visual analysis page: eval evolution chart, ranked eval swings, board moments.
  */
 (function () {
     'use strict';
@@ -65,17 +61,35 @@
         return (cp > 0 ? '+' : '') + (cp / 100.0).toFixed(2);
     }
 
-    function pickCriticalIndices(moves) {
-        const scored = moves.map((m, i) => {
-            const before = (m.eval_before === null || m.eval_before === undefined) ? 0 : m.eval_before;
-            const after = (m.eval_after === null || m.eval_after === undefined) ? 0 : m.eval_after;
-            const delta = m.is_white ? (after - before) : (before - after);
-            return { index: i, delta };
-        });
+    function moverPerspectiveDeltaCp(m) {
+        const before = (m.eval_before === null || m.eval_before === undefined) ? 0 : m.eval_before;
+        const after = (m.eval_after === null || m.eval_after === undefined) ? 0 : m.eval_after;
+        return m.is_white ? (after - before) : (before - after);
+    }
+
+    function absEvalSwingCp(m) {
+        const before = (m.eval_before === null || m.eval_before === undefined) ? 0 : m.eval_before;
+        const after = (m.eval_after === null || m.eval_after === undefined) ? 0 : m.eval_after;
+        return Math.abs(after - before);
+    }
+
+    /** Largest absolute engine jumps (centipawns), White’s perspective before/after. */
+    function rankTopAbsSwings(moves, n, minSwingCp) {
+        const arr = moves.map((m, i) => ({ index: i, m, swing: absEvalSwingCp(m) }))
+            .filter(x => x.swing >= minSwingCp);
+        arr.sort((a, b) => b.swing - a.swing);
+        return arr.slice(0, n);
+    }
+
+    /** Worst half-moves for the side that played (centipawn loss from mover POV). */
+    function pickWorstMomentsForMover(moves, maxCount, minLossCp) {
+        const scored = moves.map((m, i) => ({ index: i, delta: moverPerspectiveDeltaCp(m) }));
         scored.sort((a, b) => a.delta - b.delta);
-        const top = scored.filter(s => s.delta < -100).slice(0, 3);
-        top.sort((a, b) => a.index - b.index);
-        return top.map(s => s.index);
+        return scored
+            .filter(s => s.delta <= -minLossCp)
+            .slice(0, maxCount)
+            .sort((a, b) => a.index - b.index)
+            .map(s => s.index);
     }
 
     function renderEvalGraph(moves) {
@@ -84,7 +98,7 @@
 
         const labels = moves.map(m => m.move_number + (m.is_white ? 'w' : 'b'));
         const data = moves.map(m => evalToPawns(m.eval_after));
-        const critIdx = new Set(pickCriticalIndices(moves));
+        const swingHighlights = new Set(rankTopAbsSwings(moves, 7, 40).map(x => x.index));
 
         new Chart(canvas, {
             type: 'line',
@@ -93,22 +107,23 @@
                 datasets: [{
                     data,
                     borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13,110,253,0.15)',
+                    backgroundColor: 'rgba(13,110,253,0.12)',
                     fill: true,
                     tension: 0.25,
-                    pointRadius: (ctx) => critIdx.has(ctx.dataIndex) ? 6 : 2,
-                    pointBackgroundColor: (ctx) => critIdx.has(ctx.dataIndex) ? '#dc3545' : '#0d6efd',
+                    pointRadius: (ctx) => swingHighlights.has(ctx.dataIndex) ? 7 : 2,
+                    pointBackgroundColor: (ctx) => swingHighlights.has(ctx.dataIndex) ? '#dc3545' : '#0d6efd',
                     spanGaps: true
                 }]
             },
             options: {
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: ctx => ctx.parsed.y === null
                                 ? '—'
-                                : (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y.toFixed(2)
+                                : (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + ' pawns'
                         }
                     }
                 },
@@ -125,6 +140,40 @@
         });
     }
 
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function renderSwingRankings(moves) {
+        const ol = document.getElementById('ai-swing-rankings');
+        if (!ol) return;
+
+        const top = rankTopAbsSwings(moves, 12, 30);
+        if (top.length === 0) {
+            ol.innerHTML = '<li class="list-group-item text-muted small">No large eval swings detected for this game.</li>';
+            return;
+        }
+
+        ol.innerHTML = '';
+        top.forEach(({ m, swing }) => {
+            const ply = m.move_number + (m.is_white ? '.' : '...');
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2';
+            li.innerHTML =
+                '<div><span class="font-monospace text-muted">' + escapeHtml(ply) + '</span> ' +
+                '<strong>' + escapeHtml(m.move_san || '') + '</strong>' +
+                (m.best_move_san
+                    ? ' <span class="text-muted small">(engine ' + escapeHtml(m.best_move_san) + ')</span>'
+                    : '') +
+                '</div><div class="font-monospace small text-md-end text-nowrap">' +
+                formatEval(m.eval_before) + ' → ' + formatEval(m.eval_after) +
+                ' <span class="text-danger fw-semibold ms-1">' + (swing / 100).toFixed(1) + ' pawn swing</span></div>';
+            ol.appendChild(li);
+        });
+    }
+
     function sanToSquares(fen, san) {
         try {
             const c = new Chess(fen);
@@ -133,12 +182,6 @@
         } catch (e) {
             return null;
         }
-    }
-
-    function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, c => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[c]));
     }
 
     function narrationFor(move, before, after) {
@@ -165,10 +208,10 @@
         const container = document.getElementById('ai-critical-moments');
         if (!container) return;
 
-        const critIndices = pickCriticalIndices(moves);
+        const critIndices = pickWorstMomentsForMover(moves, 5, 75);
         if (critIndices.length === 0) {
             container.innerHTML =
-                '<p class="text-muted small mb-0">No major swings detected — both sides played consistently.</p>';
+                '<p class="text-muted small mb-0">No decisive losses from the mover’s perspective at this threshold — try the move list on Initial analysis.</p>';
             return;
         }
 
@@ -182,6 +225,7 @@
                     : 'inaccuracy';
             const sevLabel = sev[0].toUpperCase() + sev.slice(1);
             const boardId = 'ai-board-' + cardI;
+            const lossCp = Math.abs(Math.min(0, moverPerspectiveDeltaCp(m)));
 
             const col = document.createElement('div');
             col.className = 'col-lg-4 col-md-6';
@@ -190,7 +234,8 @@
                     '<div class="card-header bg-white d-flex justify-content-between align-items-center">' +
                         '<div>' +
                             '<div class="fw-semibold">Move ' + m.move_number + ' — ' + sevLabel + '</div>' +
-                            '<div class="text-muted small">' + (side === 'black' ? 'Black to move' : 'White to move') + '</div>' +
+                            '<div class="text-muted small">' + (side === 'black' ? 'Black to move' : 'White to move') +
+                            ' · −' + lossCp.toFixed(0) + ' cp for mover</div>' +
                         '</div>' +
                         '<span class="ai-sev ai-sev-' + sev + '">' + sev + '</span>' +
                     '</div>' +
@@ -248,6 +293,8 @@
         const data = loadData();
         if (!data) return;
         const fens = fenSequenceFromPgn(data.pgn);
+        try { renderSwingRankings(data.moves); }
+        catch (e) { console.warn('swing rankings failed', e); }
         try { renderEvalGraph(data.moves); }
         catch (e) { console.warn('eval graph render failed', e); }
         try { renderCriticalMoments(data.moves, fens); }

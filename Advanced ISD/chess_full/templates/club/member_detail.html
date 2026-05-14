@@ -86,8 +86,8 @@
                         <td>{{ game.result }}</td>
                         <td>{{ game.played_at|date:'Y-m-d H:i' }}</td>
                         <td class="d-flex flex-wrap gap-1">
-                            <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Analysis</a>
-                            <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-primary">Visual</a>
+                            <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Initial analysis</a>
+                            <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Visuals</a>
                         </td>
                     </tr>
                 {% empty %}
