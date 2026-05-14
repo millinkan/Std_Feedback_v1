@@ -188,6 +188,7 @@
                                         <td class="text-end">
                                             <a href="{% url 'ai_pipeline:game_embed' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Board</a>
                                             <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-primary">Analysis</a>
+                                            <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-primary">Visual</a>
                                         </td>
                                     </tr>
                                 {% empty %}
