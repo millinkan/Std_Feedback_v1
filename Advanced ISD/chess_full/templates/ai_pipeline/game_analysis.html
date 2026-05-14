@@ -7,10 +7,9 @@
     <h2 class="mb-1">{{ game.player_white }} vs {{ game.player_black }}</h2>
     <p class="text-muted mb-4"><time datetime="{{ game.played_at|date:'c' }}">{{ game.played_at|date:"M j, Y" }} {{ game.played_at|date:"H:i" }}</time> · {{ game.time_control }} · Result: <strong>{{ game.result }}</strong></p>
     {% if analysis and analysis.status == 'completed' %}
-    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+    <div class="mb-3 d-flex gap-2">
         <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'json' %}" class="btn btn-sm btn-outline-dark">Download JSON</a>
         <a href="{% url 'ai_pipeline:export_game_analysis' game.pk 'csv' %}" class="btn btn-sm btn-outline-dark">Download CSV</a>
-        <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-sm btn-outline-secondary">Visuals with details</a>
     </div>
     {% endif %}
 

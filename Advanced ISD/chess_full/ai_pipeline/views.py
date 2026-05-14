@@ -28,7 +28,8 @@ def game_embed(request, game_id):
     return render(request, 'ai_pipeline/game_embed.html', {'game': game})
 
 
-def _game_analysis_context(request, game_id):
+@login_required
+def game_analysis_view(request, game_id):
     game = _resolve_game(game_id, prefetch_analysis_moves=True)
     analysis = getattr(game, 'analysis', None)
     moves = analysis.move_evaluations.all() if analysis else []
@@ -101,24 +102,10 @@ def _game_analysis_context(request, game_id):
             'focus_areas': focus_areas,
             'summary': summary,
         }
-    return {'game': game, 'analysis': analysis, 'moves': moves, 'report': report}
-
-
-@login_required
-def game_analysis_view(request, game_id):
     return render(
         request,
         'ai_pipeline/game_analysis.html',
-        _game_analysis_context(request, game_id),
-    )
-
-
-@login_required
-def game_analysis_visual_view(request, game_id):
-    return render(
-        request,
-        'ai_pipeline/game_analysis2.html',
-        _game_analysis_context(request, game_id),
+        {'game': game, 'analysis': analysis, 'moves': moves, 'report': report},
     )
 
 

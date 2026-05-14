@@ -16,10 +16,7 @@
     {% endif %}
 
     {% if game.analysis %}
-    <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-primary">Initial analysis</a>
-        <a href="{% url 'ai_pipeline:game_analysis_visual' game.lichess_game_id|default:game.pk %}" class="btn btn-outline-secondary">Visuals with details</a>
-    </div>
+    <a href="{% url 'ai_pipeline:game_analysis' game.lichess_game_id|default:game.pk %}" class="btn btn-primary">View Stockfish Analysis</a>
     {% endif %}
 </div>
 {% endblock %}
